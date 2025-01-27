@@ -11,7 +11,9 @@ external_components:
   - source:
       type: git
       url: https://github.com/kbx81/esphome_external_components
-    components: [ dop_led ]
+    components:
+      - esp32_rmt_dop_led_h_bridge
+      - remote_base
 ```
 
 Please see ESPHome's [external components](https://esphome.io/components/external_components.html) documentation for more detail.
