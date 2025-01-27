@@ -1,6 +1,6 @@
-# kbx's ESPHome Custom/External Components
+# kbx's ESPHome External Components
 
-Here you'll find custom/external components I've hacked together for use with [ESPHome](https://esphome.io).
+Here you'll find external components I've hacked together for use with [ESPHome](https://esphome.io).
 
 ## Usage
 
@@ -10,7 +10,7 @@ To use components you find here in your own configuration, you'll need to add a 
 external_components:
   - source:
       type: git
-      url: https://github.com/kbx81/esphome_custom_components
+      url: https://github.com/kbx81/esphome_external_components
     components: [ dop_led ]
 ```
 
