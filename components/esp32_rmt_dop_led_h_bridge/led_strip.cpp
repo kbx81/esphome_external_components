@@ -56,7 +56,7 @@ void ESP32RMTDoPLEDHBridgeLightOutput::setup() {
   channel.mem_block_symbols = this->rmt_symbols_;
   channel.trans_queue_depth = 1;
   channel.flags.io_loop_back = 0;
-  channel.flags.io_od_mode = 1;
+  channel.flags.io_od_mode = this->open_drain_;
   channel.flags.invert_out = 0;
   channel.flags.with_dma = 0;
   channel.intr_priority = 0;
@@ -196,7 +196,8 @@ void ESP32RMTDoPLEDHBridgeLightOutput::write_state(light::LightState *state) {
             }
             // insert header
             for (int i = 0; i < this->num_header_bits_; i++) {
-              pdest->val = led & (1 << i) ? this->bit1_.val : this->bit0_.val;
+              pdest->val = led & (this->lsb_first_ ? 1 << i : 1 << (this->num_header_bits_ - i)) ? this->bit1_.val
+                                                                                                 : this->bit0_.val;
               pdest++;
               len++;
             }
@@ -205,7 +206,7 @@ void ESP32RMTDoPLEDHBridgeLightOutput::write_state(light::LightState *state) {
 
           uint8_t b = *psrc;
           for (int i = 0; i < 8; i++) {
-            pdest->val = b & (1 << i) ? this->bit1_.val : this->bit0_.val;
+            pdest->val = b & (this->lsb_first_ ? 1 << i : 1 << (7 - i)) ? this->bit1_.val : this->bit0_.val;
             pdest++;
             len++;
           }

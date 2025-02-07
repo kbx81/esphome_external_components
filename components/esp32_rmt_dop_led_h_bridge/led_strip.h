@@ -55,8 +55,10 @@ class ESP32RMTDoPLEDHBridgeLightOutput : public light::AddressableLight {
   void set_enable_h_bridge(bool enable_h_bridge) { this->enable_h_bridge_ = enable_h_bridge; }
   void set_is_rgbw(bool is_rgbw) { this->is_rgbw_ = is_rgbw; }
   void set_is_wrgb(bool is_wrgb) { this->is_wrgb_ = is_wrgb; }
+  void set_lsb_first(bool lsb_first) { this->lsb_first_ = lsb_first; }
   void set_num_header_bits(size_t num_header_bits) { this->num_header_bits_ = num_header_bits; }
   void set_num_leds(uint16_t num_leds) { this->num_leds_ = num_leds; }
+  void set_open_drain(bool open_drain) { this->open_drain_ = open_drain; }
   void set_output_2v5(output::BinaryOutput *pin) { this->output_2v5_ = pin; }
   void set_output_n1_pwm(output::FloatOutput *pin) { this->output_n1_pwm_ = pin; }
   void set_output_n2(output::BinaryOutput *pin) { this->output_n2_ = pin; }
@@ -111,6 +113,8 @@ class ESP32RMTDoPLEDHBridgeLightOutput : public light::AddressableLight {
   bool enable_h_bridge_{false};
   bool is_rgbw_{false};
   bool is_wrgb_{false};
+  bool lsb_first_{false};
+  bool open_drain_{false};
   bool use_psram_{false};
 
   light::ColorMode prev_color_mode_{light::ColorMode::UNKNOWN};

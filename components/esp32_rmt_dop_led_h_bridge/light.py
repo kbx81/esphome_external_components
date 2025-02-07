@@ -10,6 +10,7 @@ from esphome.const import (
     CONF_IS_RGBW,
     CONF_MAX_REFRESH_RATE,
     CONF_NUM_LEDS,
+    CONF_OPEN_DRAIN,
     CONF_OUTPUT_ID,
     CONF_PIN,
     CONF_RGB_ORDER,
@@ -65,6 +66,7 @@ CONF_BIT1_HIGH = "bit1_high"
 CONF_BIT1_LOW = "bit1_low"
 CONF_ENABLE_H_BRIDGE = "enable_h_bridge"
 CONF_IS_WRGB = "is_wrgb"
+CONF_LSB_FIRST = "lsb_first"
 CONF_NUM_HEADER_BITS = "num_header_bits"
 CONF_OUTPUT_2V5_ID = "output_2v5_id"
 CONF_OUTPUT_N1_PWM_ID = "output_n1_pwm_id"
@@ -129,7 +131,9 @@ CONFIG_SCHEMA = cv.All(
                 ESP32RMTDoPLEDHBridgeLightOutput
             ),
             cv.Required(CONF_PIN): pins.internal_gpio_output_pin_number,
+            cv.Optional(CONF_LSB_FIRST, default=False): cv.boolean,
             cv.Required(CONF_NUM_HEADER_BITS): cv.positive_not_null_int,
+            cv.Optional(CONF_OPEN_DRAIN, default=False): cv.boolean,
             cv.Required(CONF_OUTPUT_2V5_ID): cv.use_id(output.BinaryOutput),
             cv.Required(CONF_OUTPUT_P2_ID): cv.use_id(output.BinaryOutput),
             cv.Required(CONF_OUTPUT_N1_PWM_ID): cv.use_id(output.FloatOutput),
@@ -193,8 +197,10 @@ async def to_code(config):
     await light.register_light(var, config)
     await cg.register_component(var, config)
 
+    cg.add(var.set_lsb_first(config[CONF_LSB_FIRST]))
     cg.add(var.set_num_header_bits(config[CONF_NUM_HEADER_BITS]))
     cg.add(var.set_num_leds(config[CONF_NUM_LEDS]))
+    cg.add(var.set_open_drain(config[CONF_OPEN_DRAIN]))
     cg.add(var.set_output_2v5(output_2v5))
     cg.add(var.set_output_n1_pwm(output_n1_pwm))
     cg.add(var.set_output_n2(output_n2))
