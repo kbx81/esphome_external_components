@@ -1,0 +1,647 @@
+# Example ESPHome configuration for kbx's Tube Clock integration
+#
+# This example shows how to integrate kbx's Tube Clock with ESPHome
+# for complete remote control and monitoring via Home Assistant.
+# See https://github.com/kbx81/TubeClock for more information.
+#
+# All sub-platforms are shown below. Most are optional — include only
+# what you need. Platform options marked "optional" have reasonable
+# defaults built into the firmware and can be omitted entirely.
+
+substitutions:
+  device_name: tube-clock
+  friendly_name: "Tube Clock"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32-c6-devkitm-1
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    # key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    # password: !secret ota_password
+
+wifi:
+  # ssid: !secret wifi_ssid
+  # password: !secret wifi_password
+
+  # Enable fallback hotspot
+  ap:
+    ssid: "${friendly_name} Fallback"
+    # password: !secret ap_password
+
+captive_portal:
+
+improv_serial:
+
+# UART connection to Tube Clock
+# Connect ESP TX -> Clock USART3 RX (PB10)
+# Connect ESP RX -> Clock USART4 TX (PA0)
+uart:
+  - id: uart_clock
+    tx_pin: GPIO20
+    rx_pin: GPIO7
+    baud_rate: 115200
+
+# Tube Clock component
+tube_clock:
+  id: nixie_clock
+  uart_id: uart_clock
+
+  # Optional: GPIO connected to STM32 NRST (reset) pin. When provided,
+  # the component can hardware-reset the clock (for example, after DFU flash).
+  # reset_pin: GPIO5
+
+  # Optional: GPIO connected to STM32 BOOT0 pin. Required for DFU
+  # (firmware update) mode; can be omitted if you do not use OTA firmware
+  # updates for the clock MCU.
+  # boot_0_pin: GPIO4
+
+  # Optional: reconfigure the UART for DFU (firmware update) mode.
+  # All sub-fields are optional. The STM32 bootloader requires 8E1 parity;
+  # the component defaults to the same baud rate as the main uart with
+  # parity: EVEN. Override here if your DFU wiring uses different pins.
+  # dfu_uart_config:
+  #   tx_pin: GPIO4       # DFU TX pin (if different from normal operation)
+  #   rx_pin: GPIO9       # DFU RX pin (if different from normal operation)
+  #   baud_rate: 460800
+  #   parity: EVEN        # Default for STM32 bootloader; can be NONE or ODD
+
+  # Triggered whenever the clock sends any message over the UART.
+  # The 'message' variable is a std::string containing the raw message.
+  on_message:
+    - logger.log:
+        format: "Clock message: %s"
+        args: ["message.c_str()"]
+
+# ---------------------------------------------------------------------------
+# Select entities — choose from predefined option lists
+# ---------------------------------------------------------------------------
+select:
+  # Top-level operating mode (show time, date, temperature, timer, etc.)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Mode"
+    icon: mdi:television
+    type: operating_mode
+
+  # Active display slot when operating_mode is "Fixed Display"
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Fixed Display"
+    icon: mdi:clock-digital
+    type: display_mode
+
+  # Which hardware sensor to use for the temperature display slot
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Temperature Source"
+    icon: mdi:thermometer
+    type: temperature_source
+
+  # Date format shown on the tubes (such as YY-MM-DD, DD-MM-YY, MM-DD-YY)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Date Format"
+    icon: mdi:calendar
+    type: date_format
+
+  # Behavior of the colon separator LEDs between digit pairs
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Colon Behavior"
+    icon: mdi:dots-horizontal
+    type: colon_behavior
+
+  # 12-hour vs. 24-hour time display
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Time Display Mode"
+    icon: mdi:clock-outline
+    type: time_display_mode
+
+  # Temperature display units shown on the tubes
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Temperature Units"
+    icon: mdi:temperature-celsius
+    type: temperature_display_units
+
+# ---------------------------------------------------------------------------
+# Binary sensors
+# ---------------------------------------------------------------------------
+binary_sensor:
+  # Individual key states — true while the named key is held.
+  # Each sensor reports a single key; see the combo example below for chords.
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Key Up"
+    type: key
+    keys: [key_up]
+    internal: true
+
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Key Down"
+    type: key
+    keys: [key_down]
+    internal: true
+
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Key Enter"
+    type: key
+    keys: [key_enter]
+    internal: true
+
+  # Chord example: true only when BOTH A and B are held simultaneously.
+  # Valid key names: key_up, key_down, key_enter, key_c, key_b, key_a
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Keys A+B"
+    type: key
+    keys: [key_a, key_b]
+    internal: true
+
+  # True when a GPS receiver is electrically connected (signal present on UART)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} GPS Connected"
+    type: gps_connected
+    device_class: connectivity
+
+  # True when the GPS receiver has acquired a valid position fix
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} GPS Fix"
+    type: gps_fix_valid
+    device_class: connectivity
+
+  # True while the beeper is playing an RTTTL melody
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} RTTTL Playing"
+    type: rtttl_playing
+
+  # True while a timer alarm is active (timer has elapsed and not yet cleared)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Timer Alarm"
+    type: timer_alarm_active
+
+# ---------------------------------------------------------------------------
+# Sensors
+# ---------------------------------------------------------------------------
+sensor:
+  # Ambient light level read by the onboard ADC (used for auto-brightness)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Ambient Light"
+    type: adc_light
+    icon: mdi:brightness-6
+
+  # MCU supply voltage (VDDA rail)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Supply Voltage"
+    type: adc_vdda
+    device_class: voltage
+
+  # Coin-cell backup battery voltage
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Battery Voltage"
+    type: adc_vbatt
+    device_class: voltage
+
+  # Number of GPS satellites currently tracked (requires GPS receiver)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} GPS Satellites"
+    type: gps_sats
+    icon: mdi:satellite-variant
+
+  # STM32 internal die temperature sensor
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} MCU Temperature"
+    type: temp_stm32
+    device_class: temperature
+
+  # DS3234 RTC temperature register (±0.25 °C accuracy)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} RTC Temperature"
+    type: temp_ds3234
+    device_class: temperature
+
+  # DS1722 digital temperature sensor (optional external sensor)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} DS1722 Temperature"
+    type: temp_ds1722
+    device_class: temperature
+
+  # LM74 digital temperature sensor (optional external sensor)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} LM74 Temperature"
+    type: temp_lm74
+    device_class: temperature
+
+# ---------------------------------------------------------------------------
+# Switches
+# ---------------------------------------------------------------------------
+switch:
+  # Enable/disable the high-voltage supply for the Nixie tubes
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} High Voltage"
+    icon: mdi:flash
+    type: hv_power
+
+  # Automatically dim Nixie tubes based on the ambient light ADC reading
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Auto Brightness (Nixie)"
+    icon: mdi:brightness-auto
+    type: auto_brightness_nixie
+
+  # Automatically dim the RGB status LED based on the ambient light ADC reading
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Auto Brightness (RGB LED)"
+    icon: mdi:brightness-auto
+    type: auto_brightness_rgb
+
+  # Show leading zeros on the hours digit (for example, 09:05 instead of  9:05)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Leading Zeros"
+    icon: mdi:numeric
+    type: show_leading_zeros
+
+  # Use the PM indicator LED to signal AM vs. PM in 12-hour mode
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} PM Indicator LED"
+    icon: mdi:led-on
+    type: status_led_as_am_pm
+
+  # Play a chime on the beeper at the top of each hour
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Hourly Chime"
+    icon: mdi:bell-ring
+    type: hourly_chime
+
+  # Enable audible beep when alarm slot 1 triggers
+  # slot: 1–8 selects which of the eight alarm time slots this switch controls
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Alarm 1 Beep"
+    icon: mdi:bell-ring-outline
+    type: alarm_beep
+    slot: 1
+
+  # Enable tube blinking when alarm slot 1 triggers
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Alarm 1 Blink"
+    icon: mdi:alarm-light-outline
+    type: alarm_blink
+    slot: 1
+
+# ---------------------------------------------------------------------------
+# Lights
+# ---------------------------------------------------------------------------
+light:
+  # Nixie tube brightness (brightness-only; range 0–100 %)
+  # Ignored when Auto Brightness (Nixie) switch is on.
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    type: nixie
+    name: "${friendly_name} Display Brightness"
+    icon: mdi:brightness-5
+
+  # RGB status LED (full colour control)
+  # Ignored when Auto Brightness (RGB LED) switch is on.
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    type: rgb
+    name: "${friendly_name} Status LED"
+    icon: mdi:led-on
+
+# ---------------------------------------------------------------------------
+# Text sensors
+# ---------------------------------------------------------------------------
+text_sensor:
+  # Clock MCU firmware version string (for example, "26.03.01 (build 150)")
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Firmware Version"
+    icon: mdi:information-outline
+    type: firmware_version
+
+# ---------------------------------------------------------------------------
+# Number entities — tunable configuration parameters
+# ---------------------------------------------------------------------------
+number:
+  # How long (seconds) the time display is shown before cycling to the next slot
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Time Duration"
+    type: time_display_duration
+    mode: box
+
+  # How long (seconds) the date display is shown
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Date Duration"
+    type: date_display_duration
+    mode: box
+
+  # How long (seconds) the temperature display is shown
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Temperature Duration"
+    type: temp_display_duration
+    mode: box
+
+  # Duration of the cross-fade animation between digit changes (milliseconds)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Fade Duration"
+    type: fade_duration
+    mode: box
+
+  # Duration of anti-cathode-poisoning slot effects (milliseconds)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Effect Duration"
+    type: effect_duration
+    mode: box
+
+  # How often (seconds) the anti-poisoning slot effect is triggered
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Effect Frequency"
+    type: effect_frequency
+    mode: box
+
+  # Floor brightness used by the auto-brightness algorithm (1–1000)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Minimum Brightness"
+    type: minimum_intensity
+    mode: slider
+
+  # Beeper volume (0 = off, 7 = loudest)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Beeper Volume"
+    type: beeper_volume
+    mode: slider
+
+  # Temperature offset applied to STM32 internal sensor readings (±9.9 °C)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} MCU Temp Calibration"
+    type: temp_cal_stm32
+    mode: box
+
+  # Temperature offset applied to DS3234 RTC sensor readings (±9.9 °C)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} RTC Temp Calibration"
+    type: temp_cal_ds3234
+    mode: box
+
+  # Temperature offset applied to DS1722 sensor readings (±9.9 °C)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} DS1722 Temp Calibration"
+    type: temp_cal_ds1722
+    mode: box
+
+  # Temperature offset applied to LM74 sensor readings (±9.9 °C)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} LM74 Temp Calibration"
+    type: temp_cal_lm74
+    mode: box
+
+  # Value the timer reloads when tube_clock.timer_reset is called (seconds, 0–65535)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Timer Reset Value"
+    type: timer_reset_value
+    mode: box
+
+  # Inactivity timeout before the display returns to the main clock (seconds, 10–600)
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Idle Timeout"
+    type: idle_timeout
+    mode: box
+
+# ---------------------------------------------------------------------------
+# Datetime (time) entities — alarm slot times
+#
+# The clock has 8 independent alarm time slots (slot: 1–8). Each is a time
+# entity in Home Assistant showing/setting that slot's trigger time.
+# Use the alarm_beep / alarm_blink switches (above) to control what happens
+# when each alarm fires.
+# ---------------------------------------------------------------------------
+datetime:
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Alarm 1"
+    slot: 1
+
+  - platform: tube_clock
+    tube_clock_id: nixie_clock
+    name: "${friendly_name} Alarm 2"
+    slot: 2
+
+  # Add up to 8 alarm slots total (slot: 1 through 8)
+
+# ---------------------------------------------------------------------------
+# Buttons — trigger one-shot actions on the clock
+# ---------------------------------------------------------------------------
+button:
+  # Persist all current settings to the clock's non-volatile memory.
+  # Settings are lost on power-cycle if this is not called after making changes.
+  - platform: template
+    name: "${friendly_name} Save Settings"
+    icon: mdi:content-save
+    on_press:
+      - tube_clock.save_settings:
+          id: nixie_clock
+
+  # Reset all settings back to factory defaults.
+  # This also triggers a soft reset of the clock MCU.
+  - platform: template
+    name: "${friendly_name} Factory Reset"
+    icon: mdi:restore
+    on_press:
+      - tube_clock.factory_reset:
+          id: nixie_clock
+
+  # Soft-reset the clock MCU (equivalent to pressing the hardware reset button)
+  - platform: template
+    name: "${friendly_name} Reset Clock"
+    icon: mdi:restart
+    on_press:
+      - tube_clock.reset:
+          id: nixie_clock
+
+  # Sync the clock time from Home Assistant using a time ESPTime object.
+  # Requires the homeassistant time source defined below.
+  - platform: template
+    name: "${friendly_name} Sync Time from HA"
+    icon: mdi:clock-check
+    on_press:
+      - tube_clock.set_time:
+          id: nixie_clock
+          # Pass an ESPTime from any time source component:
+          time: !lambda "return id(homeassistant_time).now();"
+
+  # Alternative: set time using explicit individual fields (all fields required)
+  # - platform: template
+  #   name: "${friendly_name} Set Time (manual)"
+  #   on_press:
+  #     - tube_clock.set_time:
+  #         id: nixie_clock
+  #         hours: 12
+  #         minutes: 0
+  #         seconds: 0
+  #         year: 2025
+  #         month: 6
+  #         day: 1
+
+  # Push an external temperature value to the clock so it can display it when
+  # temperature_source is set to "External Serial".
+  - platform: template
+    name: "${friendly_name} Push External Temp"
+    icon: mdi:thermometer-plus
+    on_press:
+      - tube_clock.set_temperature:
+          id: nixie_clock
+          temperature: !lambda "return 23.5;"
+
+  # Play an RTTTL melody on the beeper.
+  # Format: "Name:d=default_duration,o=default_octave,b=bpm:note,note,..."
+  - platform: template
+    name: "${friendly_name} Play Melody"
+    icon: mdi:music-note
+    on_press:
+      - tube_clock.play_rtttl:
+          id: nixie_clock
+          rtttl: "Scale:d=4,o=5,b=120:c,d,e,f,g,a,b,c6"
+
+  # Stop any currently playing RTTTL melody immediately
+  - platform: template
+    name: "${friendly_name} Stop Melody"
+    icon: mdi:music-note-off
+    on_press:
+      - tube_clock.stop_rtttl:
+          id: nixie_clock
+
+  # Play the hourly chime now (optionally specify which hour's chime pattern).
+  # Without 'hour', plays the chime for the current hour.
+  - platform: template
+    name: "${friendly_name} Play Chime"
+    icon: mdi:bell
+    on_press:
+      - tube_clock.play_chime:
+          id: nixie_clock
+          # hour: 12  # Optional: play the pattern for a specific hour (0–23)
+
+  # Timer controls — the clock has a built-in countdown/count-up timer
+  - platform: template
+    name: "${friendly_name} Timer Count Up"
+    icon: mdi:timer-play-outline
+    on_press:
+      - tube_clock.timer_run_up:
+          id: nixie_clock
+
+  - platform: template
+    name: "${friendly_name} Timer Count Down"
+    icon: mdi:timer-minus-outline
+    on_press:
+      - tube_clock.timer_run_down:
+          id: nixie_clock
+
+  - platform: template
+    name: "${friendly_name} Timer Stop"
+    icon: mdi:timer-pause-outline
+    on_press:
+      - tube_clock.timer_stop:
+          id: nixie_clock
+
+  # Reset the timer to the value set by the 'timer_reset_value' number entity
+  - platform: template
+    name: "${friendly_name} Timer Reset"
+    icon: mdi:timer-refresh-outline
+    on_press:
+      - tube_clock.timer_reset:
+          id: nixie_clock
+
+  # Reset the timer to a specific value (seconds, 0–999999)
+  - platform: template
+    name: "${friendly_name} Timer Reset to 5 min"
+    icon: mdi:timer-settings-outline
+    on_press:
+      - tube_clock.timer_reset_to:
+          id: nixie_clock
+          seconds: 300
+
+  # Clear a latched timer alarm so the clock resumes normal display
+  - platform: template
+    name: "${friendly_name} Clear Timer Alarm"
+    icon: mdi:alarm-off
+    on_press:
+      - tube_clock.timer_clear_alarm:
+          id: nixie_clock
+
+  # Trigger an OTA firmware update of the clock MCU from a remote URL.
+  # The URL must point to a raw STM32 binary (.bin) file.
+  # Requires boot_0_pin and reset_pin to be configured for fully automatic DFU.
+  - platform: template
+    name: "${friendly_name} Update Clock Firmware"
+    icon: mdi:chip
+    on_press:
+      - tube_clock.update_firmware:
+          id: nixie_clock
+          url: !secret clock_firmware_url
+
+  # Enter the STM32 bootloader manually (for use with external DFU tools).
+  # Requires boot_0_pin to be configured.
+  - platform: template
+    name: "${friendly_name} Enter Bootloader"
+    icon: mdi:chip
+    on_press:
+      - tube_clock.enter_bootloader:
+          id: nixie_clock
+
+# ---------------------------------------------------------------------------
+# Time source — used by the 'Sync Time from HA' button above
+# ---------------------------------------------------------------------------
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    on_time_sync:
+      - logger.log: "Time synchronized with Home Assistant"

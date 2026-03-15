@@ -14,8 +14,13 @@ external_components:
     components:
       - esp32_rmt_dop_led_h_bridge
       - remote_base
+      - tube_clock
 ```
 
 Please see ESPHome's [external components](https://esphome.io/components/external_components.html) documentation for more detail.
 
-If you found any of this helpful and feel so inclined, please [Buy Me A Coffee](https://bmc.link/kbx81)! ☕️
+I hope you find my work useful. If you do and want to support me, please check out the links below.
+
+[![Sponsor me on GitHub](https://img.shields.io/badge/sponsor%20me%20on%20GitHub-sponsor-green.svg)](https://github.com/sponsors/kbx81)
+[![Support Nabu Casa](https://img.shields.io/badge/Nabu%20Casa-support-navy.svg)](https://nabucasa.com)
+[![Support the Open Home Foundation](https://img.shields.io/badge/Open%20Home%20Foundation-support-blue.svg)](https://openhomefoundation.org)
