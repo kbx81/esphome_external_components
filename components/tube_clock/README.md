@@ -334,5 +334,5 @@ $TC{C|S}<category><action>[<data>]*XX\n
 
 ## See Also
 
-- [Tube Clock Serial API Documentation](https://github.com/kbx81/TubeClock/blob/main/docs/SERIAL_API.md)
+- [Tube Clock Serial API Documentation](https://github.com/kbx81/TubeClock/blob/master/docs/SERIAL_API.md)
 - [ESPHome UART Documentation](https://esphome.io/components/uart.html)
